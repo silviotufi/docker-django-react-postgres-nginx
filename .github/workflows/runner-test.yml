@@ -1,7 +1,9 @@
 name: Runner Test
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   test-runner:
@@ -12,5 +14,6 @@ jobs:
         run: |
           echo "Runner funcionando"
           hostname
+          whoami
           docker --version
           docker ps
