@@ -9,13 +9,19 @@ on:
     branches:
       - main
 
+
 jobs:
+
+  # ==========================================
+  # BACKEND CI
+  # ==========================================
 
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -29,11 +35,16 @@ jobs:
         run: docker run --rm backend-ci python manage.py test
 
 
+  # ==========================================
+  # FRONTEND CI
+  # ==========================================
+
   frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -47,44 +58,103 @@ jobs:
         run: docker run --rm frontend-ci npm run build
 
 
+  # ==========================================
+  # INTEGRATION CI
+  # ==========================================
+
   integration:
     name: Integration CI
     runs-on: ubuntu-latest
+
     needs:
       - backend
       - frontend
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+
+      # ------------------------------------------
+      # CI ENVIRONMENT
+      # ------------------------------------------
+
+      - name: Create CI environment
+        run: |
+          cat > .env <<'EOF'
+          DEBUG=1
+          SECRET_KEY=ci-secret-key
+          DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+          POSTGRES_DB=django_dev
+          POSTGRES_USER=django
+          EOF
+
+
+      # ------------------------------------------
+      # DATABASE SECRET
+      # ------------------------------------------
 
       - name: Create CI database secret
         run: |
           mkdir -p secrets
           echo "ci_password" > secrets/db_password.txt
 
+
+      # ------------------------------------------
+      # BUILD AND START
+      # ------------------------------------------
+
       - name: Build and start services
         run: |
           docker compose -f compose.dev.yaml up -d --build
 
+
+      # ------------------------------------------
+      # SERVICE STATUS
+      # ------------------------------------------
+
       - name: Check services
         run: |
           docker compose -f compose.dev.yaml ps
+
+
+      # ------------------------------------------
+      # DJANGO CHECK
+      # ------------------------------------------
 
       - name: Run Django system check
         run: |
           docker compose -f compose.dev.yaml exec -T backend \
             python manage.py check
 
+
+      # ------------------------------------------
+      # DATABASE MIGRATIONS
+      # ------------------------------------------
+
       - name: Check database migrations
         run: |
           docker compose -f compose.dev.yaml exec -T backend \
             python manage.py migrate --check
 
+
+      # ------------------------------------------
+      # POSTGRESQL CHECK
+      # ------------------------------------------
+
       - name: Check PostgreSQL
         run: |
           docker compose -f compose.dev.yaml exec -T postgres \
-            sh -c 'PGPASSWORD=$(cat /run/secrets/db_password) psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version();"'
+            sh -c 'PGPASSWORD=$(cat /run/secrets/db_password) \
+            psql -U "$POSTGRES_USER" \
+            -d "$POSTGRES_DB" \
+            -c "SELECT version();"'
+
+
+      # ------------------------------------------
+      # CLEANUP
+      # ------------------------------------------
 
       - name: Stop services
         if: always()
