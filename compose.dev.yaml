@@ -1,0 +1,82 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-dev-v2
+    volumes:
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    user: "0:0"
+    environment:
+      NODE_ENV: development
+    command: >
+      sh -c "chown -R $(stat -c '%u:%g' /app) /app/node_modules &&
+             npm start"
+    ports:
+      - "3001:3000"
+    stdin_open: true
+    tty: true
+    networks:
+      - frontend_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-dev-v2
+    volumes:
+      - ./backend:/app
+    environment:
+      SQL_ENGINE: django.db.backends.postgresql
+      SQL_HOST: postgres
+      SQL_PORT: 5432
+      SQL_DATABASE: ${POSTGRES_DB}
+      SQL_USER: ${POSTGRES_USER}
+      SQL_PASSWORD_FILE: /run/secrets/db_password
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DATABASE: postgres
+    secrets:
+      - db_password
+    command: python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - frontend_net
+      - backend_net
+    ports:
+      - "4000:8000"
+
+  postgres:
+    image: postgres:13.2-alpine
+    container_name: postgres-dev-v2
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_dev:
+  node_modules:
+
+networks:
+  frontend_net:
+  backend_net:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
