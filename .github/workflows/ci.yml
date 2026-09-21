@@ -1,20 +1,76 @@
-name: CI  #nombre del workflow 
+name: Backend CI
 
-on:       #evento que dispara el workflow 
+on:
   push:
-    branches:  #verifica cambios que ya llegaron 
-      - main
-  pull_request:  # verifica cambios antes de incorporarlos 
     branches:
       - main
+      - develop
 
-jobs:         # trabajos que github ejecturara
-  test:
-    runs-on: ubuntu-latest   #ejecutaa este job dentro de un runner que tenga ubuntu
+  pull_request:
+    branches:
+      - main
+      - develop
 
-    steps:    # cada step ejecutra una accion o comando 
-      - name: Checkout repository    # utiliza github actions existente
-        uses: actions/checkout@v4    # descarga tu repositorio dentro del runner
+jobs:
+  backend:
+    runs-on: ubuntu-latest
 
-      - name: Show project structure # run ejecuta un comando directamente en el sistema operativo del runner
-        run: ls -la                  # permite comprobar que gitHub recibio correctamente el proyecto
+    services:
+      postgres:
+        image: postgres:13.2-alpine
+
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U test_user -d test_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -t backend-ci:latest \
+            ./backend
+
+      - name: Run migrations
+        run: |
+          docker run --rm \
+            --network host \
+            -e SQL_ENGINE=django.db.backends.postgresql \
+            -e SQL_HOST=localhost \
+            -e SQL_PORT=5432 \
+            -e SQL_DATABASE=test_db \
+            -e SQL_USER=test_user \
+            -e SQL_PASSWORD=test_password \
+            -e SECRET_KEY=test-secret-key \
+            -e DEBUG=0 \
+            -e DJANGO_ALLOWED_HOSTS=localhost \
+            backend-ci:latest \
+            python manage.py migrate
+
+      - name: Run tests
+        run: |
+          docker run --rm \
+            --network host \
+            -e SQL_ENGINE=django.db.backends.postgresql \
+            -e SQL_HOST=localhost \
+            -e SQL_PORT=5432 \
+            -e SQL_DATABASE=test_db \
+            -e SQL_USER=test_user \
+            -e SQL_PASSWORD=test_password \
+            -e SECRET_KEY=test-secret-key \
+            -e DEBUG=0 \
+            -e DJANGO_ALLOWED_HOSTS=localhost \
+            backend-ci:latest \
+            python manage.py test
