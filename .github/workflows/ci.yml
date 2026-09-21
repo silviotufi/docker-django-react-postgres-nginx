@@ -1,0 +1,20 @@
+name: CI  #nombre del workflow 
+
+on:       #evento que dispara el workflow 
+  push:
+    branches:  #verifica cambios que ya llegaron 
+      - main
+  pull_request:  # verifica cambios antes de incorporarlos 
+    branches:
+      - main
+
+jobs:         # trabajos que github ejecturara
+  test:
+    runs-on: ubuntu-latest   #ejecutaa este job dentro de un runner que tenga ubuntu
+
+    steps:    # cada step ejecutra una accion o comando 
+      - name: Checkout repository    # utiliza github actions existente
+        uses: actions/checkout@v4    # descarga tu repositorio dentro del runner
+
+      - name: Show project structure # run ejecuta un comando directamente en el sistema operativo del runner
+        run: ls -la                  # permite comprobar que gitHub recibio correctamente el proyecto
