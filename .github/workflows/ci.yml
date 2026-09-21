@@ -1,76 +1,47 @@
-name: Backend CI
+name: CI
 
 on:
   push:
     branches:
       - main
-      - develop
 
   pull_request:
     branches:
       - main
-      - develop
 
 jobs:
+
   backend:
+    name: Backend CI
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:13.2-alpine
-
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-
-        ports:
-          - 5432:5432
-
-        options: >-
-          --health-cmd "pg_isready -U test_user -d test_db"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Build backend image
-        run: |
-          docker build \
-            -t backend-ci:latest \
-            ./backend
+        run: docker build -t backend-ci ./backend
 
-      - name: Run migrations
-        run: |
-          docker run --rm \
-            --network host \
-            -e SQL_ENGINE=django.db.backends.postgresql \
-            -e SQL_HOST=localhost \
-            -e SQL_PORT=5432 \
-            -e SQL_DATABASE=test_db \
-            -e SQL_USER=test_user \
-            -e SQL_PASSWORD=test_password \
-            -e SECRET_KEY=test-secret-key \
-            -e DEBUG=0 \
-            -e DJANGO_ALLOWED_HOSTS=localhost \
-            backend-ci:latest \
-            python manage.py migrate
+      - name: Run Django checks
+        run: docker run --rm backend-ci python manage.py check
 
-      - name: Run tests
-        run: |
-          docker run --rm \
-            --network host \
-            -e SQL_ENGINE=django.db.backends.postgresql \
-            -e SQL_HOST=localhost \
-            -e SQL_PORT=5432 \
-            -e SQL_DATABASE=test_db \
-            -e SQL_USER=test_user \
-            -e SQL_PASSWORD=test_password \
-            -e SECRET_KEY=test-secret-key \
-            -e DEBUG=0 \
-            -e DJANGO_ALLOWED_HOSTS=localhost \
-            backend-ci:latest \
-            python manage.py test
+      - name: Run backend tests
+        run: docker run --rm backend-ci python manage.py test
+
+
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -t frontend-ci ./frontend
+
+      - name: Run frontend tests
+        run: docker run --rm frontend-ci npm test -- --watchAll=false
+
+      - name: Build frontend application
+        run: docker run --rm frontend-ci npm run build
