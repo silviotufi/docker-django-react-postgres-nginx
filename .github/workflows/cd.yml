@@ -42,6 +42,37 @@ jobs:
 
 
       # ==========================================
+      # CREATE PRODUCTION ENVIRONMENT
+      # ==========================================
+
+      - name: Create production secrets
+        run: |
+          cd ~/dockerlabs/prueba5/dodjrepostnginxmain
+
+          cat > .env.prod <<EOF
+          BACKEND_IMAGE=ghcr.io/silviotufi/docker-django-react-postgres-nginx-backend
+          FRONTEND_IMAGE=ghcr.io/silviotufi/docker-django-react-postgres-nginx-frontend
+          IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+
+          DEBUG=0
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+          POSTGRES_DB=django_prod
+          POSTGRES_USER=django
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_HOST=db-prod
+          POSTGRES_PORT=5432
+          EOF
+
+          cat > .env.prod.db <<EOF
+          POSTGRES_DB=django_prod
+          POSTGRES_USER=django
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          EOF
+
+
+      # ==========================================
       # DEPLOY PRODUCTION
       # ==========================================
 
@@ -51,12 +82,12 @@ jobs:
 
           docker compose \
             --env-file .env.prod \
-            -f docker-compose.prod.yml \
+            -f compose.prod.yaml \
             pull
 
           docker compose \
             --env-file .env.prod \
-            -f docker-compose.prod.yml \
+            -f compose.prod.yaml \
             up -d
 
 
@@ -70,7 +101,7 @@ jobs:
 
           docker compose \
             --env-file .env.prod \
-            -f docker-compose.prod.yml \
+            -f compose.prod.yaml \
             ps
 
 
