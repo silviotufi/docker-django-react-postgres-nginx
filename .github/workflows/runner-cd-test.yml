@@ -1,0 +1,20 @@
+name: Runner CD Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-runner-cd:
+    runs-on: [self-hosted, cd]
+
+    steps:
+      - name: Check CD runner
+        run: |
+          echo "Runner CD funcionando"
+          hostname
+          whoami
+          docker --version
+          docker compose version
+          docker ps
