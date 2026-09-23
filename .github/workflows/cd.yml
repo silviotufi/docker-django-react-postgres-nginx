@@ -1,4 +1,3 @@
-
 name: CD
 
 on:
@@ -56,7 +55,7 @@ jobs:
 
           DEBUG=0
           SECRET_KEY=${{ secrets.SECRET_KEY }}
-          DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+          DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1
 
           POSTGRES_DB=django_prod
           POSTGRES_USER=django
@@ -112,4 +111,3 @@ jobs:
       - name: Health check
         run: |
           curl -f http://localhost
-
