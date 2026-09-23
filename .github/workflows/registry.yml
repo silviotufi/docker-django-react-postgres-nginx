@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   publish:
-    name: Build and Publish Docker Images
+    name: Build and Publish Production Docker Images
     runs-on: ubuntu-latest
 
     steps:
@@ -25,9 +25,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build backend image
+      - name: Build backend production image
         run: |
           docker build \
+            -f ./backend/Dockerfile.prod \
             -t ghcr.io/${{ github.repository }}-backend:latest \
             ./backend
 
@@ -36,9 +37,10 @@ jobs:
           docker push \
             ghcr.io/${{ github.repository }}-backend:latest
 
-      - name: Build frontend image
+      - name: Build frontend production image
         run: |
           docker build \
+            -f ./frontend/Dockerfile.prod \
             -t ghcr.io/${{ github.repository }}-frontend:latest \
             ./frontend
 
