@@ -52,7 +52,7 @@ jobs:
         run: docker build -t frontend-ci ./frontend
 
       - name: Run frontend tests
-        run: docker run --rm backend-ci npm test -- --watchAll=false
+        run: docker run --rm frontend-ci npm test -- --watchAll=false
 
       - name: Build frontend application
         run: docker run --rm frontend-ci npm run build
