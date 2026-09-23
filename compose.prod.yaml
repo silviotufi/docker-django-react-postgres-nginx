@@ -1,107 +1,109 @@
 services:
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: nginx-prod
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - static_volume:/app/staticfiles:ro
-      - media_volume:/app/media:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - frontend_net
-    restart: unless-stopped
 
-  frontend:
-    image: ${REGISTRY}/frontend:${VERSION}
-    container_name: frontend-prod
-    networks:
-      - frontend_net
-    restart: unless-stopped
+  # ==========================================
+  # BACKEND
+  # ==========================================
 
-  backend:
-    image: ${REGISTRY}/backend:${VERSION}
-    container_name: backend-prod
-    command: gunicorn myproject.wsgi:application --workers 4 --bind 0.0.0.0:8000 --timeout 60 --access-logfile - --error-logfile -
-    environment:
-      DJANGO_SETTINGS_MODULE: myproject.settings.production
-      DEBUG: "False"
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${POSTGRES_DB}
-      DATABASE_USER: ${POSTGRES_USER}
-      DATABASE_PASSWORD_FILE: /run/secrets/db_password
-      SECRET_KEY_FILE: /run/secrets/django_secret_key
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-    secrets:
-      - db_password
-      - django_secret_key
+  backend-prod:
+    image: ghcr.io/silviotufi/docker-django-react-postgres-nginx-backend:latest
+
+    container_name: backend-app-prod
+
+    command: gunicorn app.wsgi:application --bind 0.0.0.0:8000
+
     volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - static_volume:/home/app/web/api/static
+
     networks:
-      - frontend_net
-      - backend_net
+      - prod
+
     expose:
       - "8000"
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:8000/health"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
 
-  postgres:
-    image: postgres:13.2-alpine
-    container_name: postgres-prod
+    env_file:
+      - ./.env.prod
+
+    depends_on:
+      db-prod:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+
+  # ==========================================
+  # FRONTEND
+  # ==========================================
+
+  frontend-prod:
+    image: ghcr.io/silviotufi/docker-django-react-postgres-nginx-frontend:latest
+
+    container_name: frontend
+
+    volumes:
+      - static_volume:/home/app/web/api/static
+
+    networks:
+      - prod
+
+    ports:
+      - "80:80"
+
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-    secrets:
-      - db_password
+      NODE_ENV: production
+
+    depends_on:
+      backend-prod:
+        condition: service_started
+
+    restart: unless-stopped
+
+
+  # ==========================================
+  # DATABASE
+  # ==========================================
+
+  db-prod:
+    image: postgres:13.2-alpine
+
+    container_name: db-prod
+
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
+
     networks:
-      - backend_net
-    restart: unless-stopped
+      - prod
+
+    env_file:
+      - ./.env.prod.db
+
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
         ]
       interval: 10s
       timeout: 5s
       retries: 5
 
+    restart: unless-stopped
+
+
+# ==========================================
+# VOLUMES
+# ==========================================
+
 volumes:
+
   postgres_data_prod:
+
   static_volume:
-  media_volume:
+
+
+# ==========================================
+# NETWORK
+# ==========================================
 
 networks:
-  frontend_net:
-  backend_net:
 
-secrets:
-  db_password:
-    file: ./secrets/db_password.txt
-  django_secret_key:
-    file: ./secrets/django_secret_key.txt
+  prod:
