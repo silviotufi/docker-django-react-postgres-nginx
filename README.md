@@ -138,6 +138,8 @@ In your browser you can visit [localhost](http://localhost) to see app running.
 
 Admin panel can be found at [localhost/api/admin/](http://localhost/api/admin/)
 
+este es el cambio 
+
 to stop it:
 
 ```docker-compose -f docker-compose.prod.yml down```
