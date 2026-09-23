@@ -1,3 +1,4 @@
+
 name: CD
 
 on:
@@ -18,10 +19,31 @@ jobs:
 
     steps:
 
+      # ==========================================
+      # CHECK DOCKER
+      # ==========================================
+
       - name: Check Docker
         run: |
           docker --version
           docker compose version
+
+
+      # ==========================================
+      # GET VERSION
+      # ==========================================
+
+      - name: Set image version
+        run: |
+          echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_ENV"
+
+          echo "Deploying version:"
+          echo "${{ github.event.workflow_run.head_sha }}"
+
+
+      # ==========================================
+      # DEPLOY PRODUCTION
+      # ==========================================
 
       - name: Deploy production
         run: |
@@ -37,6 +59,11 @@ jobs:
             -f docker-compose.prod.yml \
             up -d
 
+
+      # ==========================================
+      # CHECK SERVICES
+      # ==========================================
+
       - name: Check production services
         run: |
           cd ~/dockerlabs/prueba5/dodjrepostnginxmain
@@ -46,6 +73,12 @@ jobs:
             -f docker-compose.prod.yml \
             ps
 
+
+      # ==========================================
+      # HEALTH CHECK
+      # ==========================================
+
       - name: Health check
         run: |
           curl -f http://localhost
+
