@@ -96,6 +96,8 @@ jobs:
       # ==========================================
 
       - name: Deploy production
+        id: deploy
+        continue-on-error: true
         run: |
           cd ~/dockerlabs/prueba5/dodjrepostnginxmain
 
@@ -115,6 +117,9 @@ jobs:
       # ==========================================
 
       - name: Check production services
+        id: check_services
+        if: ${{ steps.deploy.outcome == 'success' }}
+        continue-on-error: true
         run: |
           cd ~/dockerlabs/prueba5/dodjrepostnginxmain
 
@@ -129,5 +134,94 @@ jobs:
       # ==========================================
 
       - name: Health check
+        id: health_check
+        if: ${{ steps.deploy.outcome == 'success' && steps.check_services.outcome == 'success' }}
+        continue-on-error: true
         run: |
-          curl -f http://localhost
+          curl -f --max-time 10 http://localhost
+
+
+      # ==========================================
+      # AUTOMATIC ROLLBACK
+      # ==========================================
+
+      - name: Rollback production
+        if: >
+          ${{
+            (steps.deploy.outcome == 'failure' ||
+             steps.check_services.outcome == 'failure' ||
+             steps.health_check.outcome == 'failure')
+            && env.PREVIOUS_TAG != ''
+          }}
+        run: |
+          cd ~/dockerlabs/prueba5/dodjrepostnginxmain
+
+          echo "=========================================="
+          echo "ROLLBACK"
+          echo "=========================================="
+
+          echo "Previous version:"
+          echo "$PREVIOUS_TAG"
+
+          sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$PREVIOUS_TAG/" .env.prod
+
+          echo "Restoring previous Docker images..."
+
+          docker compose \
+            --env-file .env.prod \
+            -f compose.prod.yaml \
+            pull
+
+          docker compose \
+            --env-file .env.prod \
+            -f compose.prod.yaml \
+            up -d
+
+
+      # ==========================================
+      # VERIFY ROLLBACK
+      # ==========================================
+
+      - name: Verify rollback
+        if: >
+          ${{
+            (steps.deploy.outcome == 'failure' ||
+             steps.check_services.outcome == 'failure' ||
+             steps.health_check.outcome == 'failure')
+            && env.PREVIOUS_TAG != ''
+          }}
+        run: |
+          cd ~/dockerlabs/prueba5/dodjrepostnginxmain
+
+          echo "Waiting for services..."
+          sleep 10
+
+          echo "Checking production services..."
+
+          docker compose \
+            --env-file .env.prod \
+            -f compose.prod.yaml \
+            ps
+
+          echo "Checking application..."
+
+          curl -f --max-time 10 http://localhost
+
+          echo "Rollback completed successfully."
+
+
+      # ==========================================
+      # FAIL RELEASE IF DEPLOYMENT FAILED
+      # ==========================================
+
+      - name: Mark deployment as failed
+        if: >
+          ${{
+            steps.deploy.outcome == 'failure' ||
+            steps.check_services.outcome == 'failure' ||
+            steps.health_check.outcome == 'failure'
+          }}
+        run: |
+          echo "The new deployment failed."
+          echo "Production was restored to the previous version."
+          exit 1
