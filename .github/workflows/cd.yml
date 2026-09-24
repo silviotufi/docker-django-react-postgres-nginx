@@ -175,7 +175,7 @@ jobs:
           docker compose \
             --env-file .env.prod \
             -f compose.prod.yaml \
-            up -d
+            up -d --force-recreate
 
 
       # ==========================================
