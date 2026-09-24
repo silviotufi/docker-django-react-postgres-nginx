@@ -46,7 +46,7 @@ services:
       - prod
 
     ports:
-      - "80:80"
+      - "8080:80"   #error controlado "80:80"
 
     environment:
       NODE_ENV: production
