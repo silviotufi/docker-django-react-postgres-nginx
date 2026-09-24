@@ -165,6 +165,14 @@ jobs:
 
           sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$PREVIOUS_TAG/" .env.prod
 
+          # IMPORTANT:
+          # GITHUB_ENV contains the new version.
+          # Override it so Docker Compose uses the previous version.
+          export IMAGE_TAG="$PREVIOUS_TAG"
+
+          echo "IMAGE_TAG used for rollback:"
+          echo "$IMAGE_TAG"
+
           echo "Restoring previous Docker images..."
 
           docker compose \
@@ -192,6 +200,13 @@ jobs:
           }}
         run: |
           cd ~/dockerlabs/prueba5/dodjrepostnginxmain
+
+          # IMPORTANT:
+          # Make Compose use the previous version during verification.
+          export IMAGE_TAG="$PREVIOUS_TAG"
+
+          echo "IMAGE_TAG used for verification:"
+          echo "$IMAGE_TAG"
 
           echo "Waiting for services..."
           sleep 10
