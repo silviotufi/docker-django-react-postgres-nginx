@@ -1,9 +1,11 @@
-apiVersion: backstage.io/vialpha1
-kind: Component 
-metadata: 
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: docker-django-react-postgres-nginx
-  description: Aplication Fjango + React + PostgreSQL + Nginx 
-spec: 
+  description: Stack Docker con Django, React, PostgreSQL y Nginx
+  annotations:
+    github.com/project-slug: silviotufi/docker-django-react-postgres-nginx
+spec:
   type: service
-  lifecycle: production
-  owner: user:guest
+  lifecycle: experimental
+  owner: user:silviotufi
