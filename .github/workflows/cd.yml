@@ -18,9 +18,7 @@ jobs:
 
     steps:
 
-      # ==========================================
-      # CHECK DOCKER
-      # ==========================================
+      # REVISA DOCKER
 
       - name: Check Docker
         run: |
@@ -28,9 +26,7 @@ jobs:
           docker compose version
 
 
-      # ==========================================
-      # GET VERSION
-      # ==========================================
+      # OBTIENE VERSION
 
       - name: Set image version
         run: |
@@ -40,9 +36,7 @@ jobs:
           echo "${{ github.event.workflow_run.head_sha }}"
 
 
-      # ==========================================
-      # SAVE CURRENT VERSION
-      # ==========================================
+      # GUARDA ACTUAL VERSION
 
       - name: Save current version
         run: |
@@ -59,10 +53,7 @@ jobs:
           echo "Previous version:"
           echo "$PREVIOUS_TAG"
 
-
-      # ==========================================
-      # CREATE PRODUCTION ENVIRONMENT
-      # ==========================================
+      # CREA ENTORNO DE PRODUCCION
 
       - name: Create production secrets
         run: |
@@ -90,10 +81,7 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           EOF
 
-
-      # ==========================================
-      # DEPLOY PRODUCTION
-      # ==========================================
+      # DESPLIEGUE PRODUCCION
 
       - name: Deploy production
         id: deploy
@@ -111,10 +99,7 @@ jobs:
             -f compose.prod.yaml \
             up -d
 
-
-      # ==========================================
-      # CHECK SERVICES
-      # ==========================================
+      # REVISA SERVICIOS
 
       - name: Check production services
         id: check_services
@@ -129,9 +114,7 @@ jobs:
             ps
 
 
-      # ==========================================
-      # HEALTH CHECK
-      # ==========================================
+      # REVISA HEALTH
 
       - name: Health check
         id: health_check
@@ -140,10 +123,7 @@ jobs:
         run: |
           curl -f --max-time 10 http://localhost
 
-
-      # ==========================================
       # AUTOMATIC ROLLBACK
-      # ==========================================
 
       - name: Rollback production
         if: >
@@ -156,9 +136,7 @@ jobs:
         run: |
           cd ~/dockerlabs/prueba5/dodjrepostnginxmain
 
-          echo "=========================================="
           echo "ROLLBACK"
-          echo "=========================================="
 
           echo "Previous version:"
           echo "$PREVIOUS_TAG"
@@ -186,9 +164,7 @@ jobs:
             up -d --force-recreate
 
 
-      # ==========================================
-      # VERIFY ROLLBACK
-      # ==========================================
+      # VERIFICA ROLLBACK
 
       - name: Verify rollback
         if: >
@@ -225,9 +201,7 @@ jobs:
           echo "Rollback completed successfully."
 
 
-      # ==========================================
       # FAIL RELEASE IF DEPLOYMENT FAILED
-      # ==========================================
 
       - name: Mark deployment as failed
         if: >

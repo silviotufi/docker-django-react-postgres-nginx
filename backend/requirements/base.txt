@@ -1,2 +1,6 @@
 Django==4.2.25
 psycopg2-binary==2.9.10
+
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-django
